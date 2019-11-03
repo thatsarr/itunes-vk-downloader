@@ -19,7 +19,7 @@ vk = vk_session.get_api()  # Теперь можно обращаться к м�
 vk_audio = audio.VkAudio(vk_session)  # Получаем доступ к audio
 
 
-def download(artist, song):
+def download(path, artist, song):
     print("Searching for \"{} - {}\"".format(artist, song))
     res = list(vk_audio.search("{} - {}".format(artist, song)))
     if len(res) >= 1:

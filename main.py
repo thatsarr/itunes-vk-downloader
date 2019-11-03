@@ -48,7 +48,7 @@ with open(tmp_fname, "rt") as f:
         songname = values[0]
         artist = values[1]
         print("\nSong {} of {}".format(i, total_songs))
-        res = download(artist, songname)
+        res = download(args.output, artist, songname)
         if res == 1:
             failed_files.append((i, artist, songname, "not found in VK"))
         line = f.readline()
