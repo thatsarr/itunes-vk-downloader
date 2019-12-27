@@ -81,7 +81,7 @@ def main():
     print("{} entries found".format(total_songs))
 
     print("Starting download")
-    failed_requests = downloader.download_songs(request_lines)
+    failed_requests = downloader.download_songs(args.output, request_lines)
 
     if len(failed_requests) != 0:
         print("Files downloaded: {} of {}".format(total_songs - len(failed_requests), total_songs))

@@ -11,10 +11,6 @@ class VkDownloader:
 
     def __init__(self, tgt_dir):
         self.vk_audio = None
-        if not os.path.isdir(tgt_dir):
-            raise ValueError
-        else:
-            self.tgt_dir = tgt_dir
 
     def auth(self, vk_login, vk_password):
         vk_session = vk_api.VkApi(login=vk_login, password=vk_password)
@@ -26,39 +22,54 @@ class VkDownloader:
         self.vk_audio = audio.VkAudio(vk_session)  # Получаем доступ к audio
         return 0
 
-    def download_songs(self, search_request_lines):
+    def search(self, search_request):
+        print("Searching for \"{}\"".format(search_request))
+        res = list(self.vk_audio.search(search_request))
+        if len(res) == 0:
+            return None
+        else:
+            return res
+
+    def choose_search_result(self, search_results):
+        return search_results[0]
+
+    def download_songs(self, tgt_dir, search_request_lines):
+        if not os.path.isdir(tgt_dir):
+            raise ValueError
+
         total_songs = len(search_request_lines)
 
         failed_requests = []
         for i, line in enumerate(search_request_lines):
+            line = line.replace("\n", "")
             print("\nSong {} of {}".format(i, total_songs))
-            res = self.download(self.tgt_dir, line)
+            search_result = self.choose_search_result(self.search(line))
+
+            res = self.download(tgt_dir, search_result)
             if res == 1:
                 failed_requests.append((i, search_request_lines, "not found in VK"))
 
         return failed_requests
 
-    def download(self, path, search_line):
-        print("Searching for \"{}\"".format(search_line))
-        res = list(self.vk_audio.search(search_line))
-        if len(res) >= 1:
-            url = res[0]['url']
-            artist = res[0]['artist']
-            song = res[0]['title']
-            result_string = "{} - {}".format(artist, song)
-        else:
-            print("[ ERROR ]: 0 search results")
-            return 1
-        print("Search success, file found: \"{}\"".format(result_string))
+    def download(self, tgt_dir, search_result):
+        if not os.path.isdir(tgt_dir):
+            raise ValueError
 
-        if search_line.lower() != result_string.lower():
-            print("[ WARNING ]: search tgt string doesn't match search result (tgt: \"{}\"; res:\"{}\")"
-                  .format(search_line, result_string))
+        url = search_result['url']
+        artist = search_result['artist']
+        song = search_result['title']
+        result_string = "{}-{}.mp3".format(artist, song)
 
         filename_short = "{}-{}.mp3".format(artist, song)
-        filename_long = os.path.join(path, filename_short)
+        filename_long = os.path.join(tgt_dir, filename_short)
+
         if os.path.exists(filename_long):
             print("File \"%s\" exists. skipping" % filename_long)
+            return
+
+        # if search_line.lower() != result_string.lower():
+        #     print("[ WARNING ]: search tgt string doesn't match search result (tgt: \"{}\"; res:\"{}\")"
+        #           .format(search_line, result_string))
 
         print("Preparing for download \"{}\" mp3".format(result_string))
         inst = vlc.Instance("--quiet")
