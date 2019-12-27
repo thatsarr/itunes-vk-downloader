@@ -9,7 +9,8 @@ from modules.spinner import spin
 class VkDownloader:
     REQUEST_STATUS_CODE = 200
 
-    def __init__(self, tgt_dir):
+    def __init__(self, interactive = True):
+        self.interactive = interactive
         self.vk_audio = None
 
     def auth(self, vk_login, vk_password):
@@ -30,8 +31,26 @@ class VkDownloader:
         else:
             return res
 
-    def choose_search_result(self, search_results):
-        return search_results[0]
+    def choose_search_result(self, search_line, search_results):
+        for search_result in search_results:
+            artist = search_result['artist']
+            song = search_result['title']
+            result_string = "{}-{}".format(artist, song)
+            if search_line.lower().replace(" ", "") != result_string.lower().replace(" ", ""):
+                print("[ WARNING ]: search tgt string doesn't match search result (tgt: \"{}\"; res:\"{}\")"
+                      .format(search_line, result_string))
+                if not self.interactive:
+                    print("Going to next result")
+                else:
+                    decision = input("Go to next result (1) or skip line (2) or download anyway (3)? : ")
+                    if decision == "2":
+                        return None
+                    elif decision == "3":
+                        return search_result
+            else:
+                return search_result
+        return None
+
 
     def download_songs(self, tgt_dir, search_request_lines):
         if not os.path.isdir(tgt_dir):
@@ -43,11 +62,15 @@ class VkDownloader:
         for i, line in enumerate(search_request_lines):
             line = line.replace("\n", "")
             print("\nSong {} of {}".format(i, total_songs))
-            search_result = self.choose_search_result(self.search(line))
-
-            res = self.download(tgt_dir, search_result)
-            if res == 1:
+            search_results = self.search(line)
+            if search_results is None:
                 failed_requests.append((i, search_request_lines, "not found in VK"))
+                continue;
+            search_result = self.choose_search_result(line, search_results)
+            if search_result is None:
+                continue
+
+            self.download(tgt_dir, search_result)
 
         return failed_requests
 
@@ -66,10 +89,6 @@ class VkDownloader:
         if os.path.exists(filename_long):
             print("File \"%s\" exists. skipping" % filename_long)
             return
-
-        # if search_line.lower() != result_string.lower():
-        #     print("[ WARNING ]: search tgt string doesn't match search result (tgt: \"{}\"; res:\"{}\")"
-        #           .format(search_line, result_string))
 
         print("Preparing for download \"{}\" mp3".format(result_string))
         inst = vlc.Instance("--quiet")

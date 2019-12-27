@@ -77,6 +77,10 @@ def main():
 
     request_lines = preprocess_input()
 
+    if args.start_number:
+        for i in range(args.start_number):
+            request_lines.pop(0)
+
     total_songs = len(request_lines)
     print("{} entries found".format(total_songs))
 
